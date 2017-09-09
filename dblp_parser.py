@@ -6,6 +6,8 @@ from bs4 import BeautifulSoup
 
 #initalise reader and writer
 fr = open( "dblp.xml", "r" )
+#fr = open( "test1.txt", "r" )
+fr.seek(0, 1)
 #fw = open("test.txt","w+")
 fw = open('dblp.csv', 'w', encoding='utf-8')
 csvwriter = csv.writer(fw, lineterminator="\n")
@@ -14,7 +16,7 @@ record = ''
 started = 0
 types = ["article","inproceedings","proceedings","book","incollection",
                 "phdthesis","mastersthesis","www","data"];
-cols=["key","type","author","title","booktitle","pages","year","address","journal","volume","number","month","url","ee"]#,"publisher","crossref","isbn","series","school","chapter"]
+cols=["key","type","author","editor","title","booktitle","pages","year","address","journal","volume","number","month","url","ee","series"]#,"publisher","crossref","isbn","series","school","chapter"]
 
 #write the table header to csv
 header =[]
@@ -30,8 +32,8 @@ def remove_non_ascii(text):
 #check if its the start of an publiObject, if not return nothing
 def get_start_parent_element(text):
     for publiType in types:
-        if ('<'+publiType) in words:
-            return '<'+publiType;
+        if ('<'+publiType+' ') in words:
+            return '<'+publiType+' ';
 #check if its the end of an publiObject, if not return nothing
 def get_end_parent_element(text):
     for publiType in types:
@@ -53,27 +55,36 @@ def endPubli(record, endTag):
     publi =[]
     #key = tree.attrib['key']
     tree = soup.find("body").contents[0]
-    print (tree)
     key = tree['key']
     publi.append(key)
     publiType = tree.name
     publi.append(publiType)
+
     authors = "{"
     for member in tree.find_all('author'):
         authors=authors+member.text+","
     if len(authors)>1:
         authors=authors[:len(authors)-1]
     authors=authors+"}"
+    authors = str.replace(authors, '"','')
     publi.append(authors)
 
+    editors = "{"
+    for member in tree.find_all('editor'):
+        editors=editors+member.text+","
+    if len(editors)>1:
+        editors=editors[:len(editors)-1]
+    editors=editors+"}"
+    editors = str.replace(editors, '"','')
+    publi.append(editors)
+
     for col in cols:
-        if col!='author' and col!='key' and col!='type':
+        if col!='author' and col!='editor' and col!='key' and col!='type':
             value = tree.find(col)
             if value is not None:
                 value=value.text
             publi.append(value)
 
-    print (publi)
     csvwriter.writerow(publi)
 
 #read line by line XML
@@ -85,7 +96,11 @@ for line in fr:
     #if it is end of an object, stop recoding the line and process the object
     if endPubliType is not None and endPubliType in words:
         count=count+1
-        endPubli(record,(endPubliType))
+        try:
+            endPubli(record,(endPubliType))
+        except:
+            print(record)
+            print ("Unexpected error:"+ sys.exc_info()[0])
         record=''
         #if count==200:
         #    break
