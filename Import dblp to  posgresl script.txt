@@ -1,0 +1,66 @@
+CREATE SCHEMA dblp
+  AUTHORIZATION postgres;
+
+CREATE TABLE dblp.raw_data
+(
+  key character varying NOT NULL,
+  type character varying,
+  author text[],
+  editor  text[],
+  title character varying,
+  booktitle character varying,
+  pages character varying,
+  year character varying,
+  address character varying,
+  journal character varying,
+  volume character varying,
+  "number" character varying,
+  month character varying,
+  url character varying,
+  ee character varying,
+  series character varying
+)
+WITH (
+  OIDS=FALSE
+);
+ALTER TABLE dblp.raw_data
+  OWNER TO postgres;
+
+COPY dblp.raw_data FROM 'C:/Users/YSJ laptop/Desktop/DB Project/dblp/dblp.csv' DELIMITER ',' CSV HEADER;
+
+
+CREATE TABLE dblp.author
+(
+  id serial NOT NULL,
+  name character varying
+)
+WITH (
+  OIDS=FALSE
+);
+ALTER TABLE dblp.author
+  OWNER TO postgres;
+
+INSERT INTO dblp.author (name)
+SELECT  distinct unnest(author) as name
+FROM dblp.raw_data; 
+
+
+
+CREATE TABLE dblp.publicity
+(
+  id serial NOT NULL,
+  key character varying NOT NULL,
+  type character varying,
+  title character varying,
+  booktitle character varying,
+  pages character varying,
+  year character varying,
+  address character varying,
+  journal character varying,
+  volume character varying,
+  "number" character varying,
+  month character varying,
+  url character varying,
+  ee character varying,
+  series character varying
+)
