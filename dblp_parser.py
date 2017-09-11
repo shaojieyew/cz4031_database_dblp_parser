@@ -16,7 +16,7 @@ record = ''
 started = 0
 types = ["article","inproceedings","proceedings","book","incollection",
                 "phdthesis","mastersthesis","www","data"];
-cols=["key","type","author","editor","title","booktitle","pages","year","address","journal","volume","number","month","url","ee","series"]#,"publisher","crossref","isbn","series","school","chapter"]
+cols=["key","type","author","editor","title","booktitle","pages","year","address","journal","volume","number","month","url","ee","series","publisher","crossref","isbn","school","chapter"]
 
 #write the table header to csv
 header =[]
