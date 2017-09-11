@@ -6,7 +6,7 @@ CREATE TABLE dblp.raw_data
   key character varying NOT NULL,
   type character varying,
   author text[],
-  editor  text[],
+  editor text[],
   title character varying,
   booktitle character varying,
   pages character varying,
@@ -18,49 +18,117 @@ CREATE TABLE dblp.raw_data
   month character varying,
   url character varying,
   ee character varying,
-  series character varying
-)
-WITH (
-  OIDS=FALSE
+  series character varying,
+  publisher character varying,
+  crossref character varying,
+  isbn character varying,
+  school character varying,
+  chapter character varying,
+  CONSTRAINT raw_pkey PRIMARY KEY (key)
 );
-ALTER TABLE dblp.raw_data
-  OWNER TO postgres;
 
 COPY dblp.raw_data FROM 'C:/Users/YSJ laptop/Desktop/DB Project/dblp/dblp.csv' DELIMITER ',' CSV HEADER;
 
 
-CREATE TABLE dblp.author
+
+CREATE TABLE dblp.person
 (
   id serial NOT NULL,
-  name character varying
-)
-WITH (
-  OIDS=FALSE
+  name character varying,
+  CONSTRAINT person_pkey PRIMARY KEY (id)
 );
-ALTER TABLE dblp.author
-  OWNER TO postgres;
+CREATE INDEX person_name_idx
+  ON dblp.person
+  USING btree
+  (name COLLATE pg_catalog."default" text_pattern_ops);
 
-INSERT INTO dblp.author (name)
+
+INSERT INTO dblp.person (name)
 SELECT  distinct unnest(author) as name
-FROM dblp.raw_data; 
+FROM dblp.raw_data
+union
+SELECT  distinct unnest(editor) as name
+FROM dblp.raw_data;
+
+
+CREATE TABLE dblp.booktitle
+(
+  id serial NOT NULL,
+  title character varying,
+  CONSTRAINT booktitle_pkey PRIMARY KEY (id)
+);
+
+
+INSERT INTO dblp.booktitle (title)
+SELECT  distinct booktitle
+FROM dblp.raw_data where booktitle is not null;
+
+
+CREATE TABLE dblp.journal
+(
+  id serial NOT NULL,
+  name character varying,
+  CONSTRAINT journal_pkey PRIMARY KEY (id)
+);
+
+INSERT INTO dblp.journal (name)
+SELECT  distinct journal
+FROM dblp.raw_data where journal is not null;
 
 
 
-CREATE TABLE dblp.publicity
+CREATE TABLE dblp.pub_type
+(
+  id serial NOT NULL,
+  type character varying,
+  CONSTRAINT pub_type_pkey PRIMARY KEY (id)
+);
+
+INSERT INTO dblp.pub_type (type)
+SELECT  distinct type
+FROM dblp.raw_data;
+
+
+
+CREATE TABLE dblp.publication
 (
   id serial NOT NULL,
   key character varying NOT NULL,
-  type character varying,
+  type integer,
   title character varying,
-  booktitle character varying,
   pages character varying,
-  year character varying,
-  address character varying,
-  journal character varying,
+  year integer,
+  journal integer,
+  booktitle integer,
   volume character varying,
   "number" character varying,
   month character varying,
-  url character varying,
-  ee character varying,
-  series character varying
-)
+  CONSTRAINT publication_pkey PRIMARY KEY (id),
+  CONSTRAINT publication_key_fkey FOREIGN KEY (key)
+      REFERENCES dblp.raw_data (key) MATCH SIMPLE
+      ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+
+INSERT INTO dblp.publication (key,type,title,pages, year,journal,booktitle,volume,number,month)
+select key,
+pub_type.id as type,
+raw_data.title,pages, CAST(nullif(raw_data.year, '') AS integer) as year,
+journal.id as journal,
+booktitle.id as booktitle,
+volume,number,month
+ from dblp.raw_data left join dblp.booktitle on raw_data.booktitle = booktitle.title
+left join dblp.journal on raw_data.journal = journal.name
+left join dblp.pub_type on raw_data.type = pub_type.type;
+
+
+CREATE TABLE dblp.author
+(
+  person_id integer NOT NULL,
+  publication_id integer NOT NULL,
+  CONSTRAINT author_pkey PRIMARY KEY (person_id, publication_id)
+);
+
+INSERT INTO dblp.author (publication_id,person_id)
+select publication.id as publication_id,person.id as person_id from dblp.raw_data 
+inner join dblp.publication on raw_data.key= publication.key
+inner join dblp.person on  person.name=ANY(raw_data.author );
